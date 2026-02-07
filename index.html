@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loopspur — Austin, TX</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: #16161f;
+  --accent: #e86a3a;
+  --accent-warm: #f0924a;
+  --accent-dim: #e86a3a15;
+  --accent-glow: #e8693a30;
+  --teal: #3ac4b8;
+  --teal-dim: #3ac4b815;
+  --text-primary: #e8e8ef;
+  --text-secondary: #8888a0;
+  --text-dim: #55556a;
+  --border: #1e1e2e;
+  --gradient-start: #e8693a;
+  --gradient-end: #f0924a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.glow-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(140px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glow-orb-1 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, #e8693a18 0%, transparent 70%);
+  top: -150px; right: -50px;
+  animation: float 20s ease-in-out infinite;
+}
+
+.glow-orb-2 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, #3ac4b812 0%, transparent 70%);
+  bottom: 20%; left: -100px;
+  animation: float 25s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(30px, -40px); }
+}
+
+/* Nav */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  background: rgba(10, 10, 15, 0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.nav-links {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+
+.nav-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 400;
+  transition: color 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.nav-links a:hover { color: var(--text-primary); }
+
+/* Hero */
+.hero {
+  position: relative;
+  z-index: 1;
+  min-height: 65vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 160px 40px 80px;
+}
+
+.hero h1 {
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -1.5px;
+  max-width: 750px;
+  margin-bottom: 20px;
+  animation: fadeInUp 0.6s ease both;
+}
+
+.hero h1 em {
+  font-family: 'DM Serif Display', serif;
+  font-style: italic;
+  font-weight: 400;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero p {
+  font-size: clamp(16px, 2vw, 19px);
+  color: var(--text-secondary);
+  max-width: 480px;
+  line-height: 1.7;
+  font-weight: 300;
+  animation: fadeInUp 0.6s ease 0.1s both;
+}
+
+.hero-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 32px;
+  padding: 10px 24px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  animation: fadeInUp 0.6s ease 0.2s both;
+}
+
+.hero-location .pin {
+  font-size: 14px;
+}
+
+.hero-location span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Products */
+.products {
+  position: relative;
+  z-index: 1;
+  padding: 80px 40px 120px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 48px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.product-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.product-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gradient-start), var(--accent-warm));
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.product-card:hover {
+  border-color: var(--accent-glow);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+}
+
+.product-card:hover::before { opacity: 1; }
+
+.product-icon {
+  width: 48px; height: 48px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-glow);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 24px;
+}
+
+.product-name {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
+}
+
+.product-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: var(--accent);
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.product-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 24px;
+  font-weight: 300;
+}
+
+.product-features {
+  list-style: none;
+  margin-bottom: 32px;
+}
+
+.product-features li {
+  font-size: 14px;
+  color: var(--text-secondary);
+  padding: 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.product-features li::before {
+  content: '→';
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.product-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: gap 0.2s;
+}
+
+.product-link:hover { gap: 12px; }
+
+.product-link::after {
+  content: '→';
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.product-card.coming-soon { opacity: 0.5; }
+
+.product-card.coming-soon .product-icon {
+  background: #1a1a2e;
+  border-color: var(--border);
+}
+
+.coming-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: var(--bg-primary);
+  padding: 4px 12px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  display: inline-block;
+}
+
+/* Footer */
+footer {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid var(--border);
+  padding: 48px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.footer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 48px;
+  flex-wrap: wrap;
+  gap: 32px;
+}
+
+.footer-brand {
+  max-width: 300px;
+}
+
+.footer-brand-name {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 12px;
+}
+
+.footer-brand p {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+.footer-links-group {
+  display: flex;
+  gap: 64px;
+}
+
+.footer-col h4 {
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.footer-col a {
+  display: block;
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+  padding: 4px 0;
+  letter-spacing: 0.2px;
+}
+
+.footer-col a:hover { color: var(--text-primary); }
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-copy {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.footer-legal {
+  display: flex;
+  gap: 24px;
+}
+
+.footer-legal a {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-legal a:hover { color: var(--text-secondary); }
+
+/* Mobile */
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  .nav-links { gap: 16px; }
+  .hero { padding: 120px 20px 60px; }
+  .products { padding: 60px 20px 80px; }
+  .product-grid { grid-template-columns: 1fr; }
+  footer { padding: 36px 20px; }
+  .footer-top { flex-direction: column; }
+  .footer-links-group { gap: 40px; }
+  .footer-bottom { flex-direction: column; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="glow-orb glow-orb-1"></div>
+<div class="glow-orb glow-orb-2"></div>
+
+<nav>
+  <div class="nav-logo">LOOPSPUR</div>
+  <div class="nav-links">
+    <a href="#products">Products</a>
+    <a href="mailto:hello@loopspur.ai">Contact</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>A software company building products people use <em>every day.</em></h1>
+  <p>We make tools that are simple, smart, and always working for you.</p>
+  <div class="hero-location">
+    <span class="pin">🌵</span>
+    <span>Austin, Texas</span>
+  </div>
+</section>
+
+<section class="products" id="products">
+  <div class="section-label">// What We're Building</div>
+  
+  <div class="product-grid">
+    <div class="product-card">
+      <div class="product-icon">📊</div>
+      <div class="product-name">PolyPulse</div>
+      <div class="product-price">Free / $9.99 mo Premium</div>
+      <div class="product-desc">Real-time Polymarket prediction market tracking on Telegram. Alerts, watchlists, trending markets, and daily digests.</div>
+      <ul class="product-features">
+        <li>Instant price checks on any market</li>
+        <li>Smart alerts when odds shift</li>
+        <li>Daily digest of biggest movers</li>
+        <li>Personal watchlist tracking</li>
+        <li>Trending markets with volume data</li>
+      </ul>
+      <a href="https://t.me/GetPolyPulse_bot" class="product-link">Try on Telegram</a>
+    </div>
+    
+    <div class="product-card">
+      <div class="product-icon">💰</div>
+      <div class="product-name">SpendBot</div>
+      <div class="product-price">Free / $4.99 Premium</div>
+      <div class="product-desc">Smart expense tracking that makes managing money effortless. Track spending, set budgets, and get insights.</div>
+      <ul class="product-features">
+        <li>Quick expense logging</li>
+        <li>Smart category detection</li>
+        <li>Monthly budget tracking</li>
+        <li>Spending streaks & insights</li>
+        <li>Works offline as PWA</li>
+      </ul>
+      <a href="#" class="product-link" style="pointer-events:none; opacity:0.4;">Coming to App Stores</a>
+    </div>
+
+    <div class="product-card coming-soon">
+      <div class="product-icon">🔮</div>
+      <div class="product-name">More coming</div>
+      <div class="coming-badge">In Pipeline</div>
+      <div class="product-desc" style="margin-top: 16px;">New products ship regularly. We're always building the next thing.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="footer-brand-name">LOOPSPUR</div>
+      <p>Built in Austin, TX. We make software that works harder than you do.</p>
+    </div>
+    <div class="footer-links-group">
+      <div class="footer-col">
+        <h4>Products</h4>
+        <a href="https://t.me/GetPolyPulse_bot">PolyPulse</a>
+        <a href="#">SpendBot</a>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="mailto:hello@loopspur.ai">Contact</a>
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 Loopspur. All rights reserved.</div>
+    <div class="footer-legal">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

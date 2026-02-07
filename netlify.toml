@@ -1,0 +1,30 @@
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "https://loopspur.com/*"
+  to = "https://loopspur.ai/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.loopspur.com/*"
+  to = "https://loopspur.ai/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.loopspur.ai/*"
+  to = "https://loopspur.ai/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy.html"
+  status = 200
+
+[[redirects]]
+  from = "/terms"
+  to = "/terms.html"
+  status = 200
