@@ -7,528 +7,342 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #12121a;
-  --bg-card: #16161f;
-  --accent: #e86a3a;
-  --accent-warm: #f0924a;
-  --accent-dim: #e86a3a15;
-  --accent-glow: #e8693a30;
-  --teal: #3ac4b8;
-  --teal-dim: #3ac4b815;
-  --text-primary: #e8e8ef;
-  --text-secondary: #8888a0;
-  --text-dim: #55556a;
-  --border: #1e1e2e;
-  --gradient-start: #e8693a;
-  --gradient-end: #f0924a;
+--bg-primary: #07070c;
+--bg-secondary: #0e0e16;
+--bg-card: #111119;
+--bg-card-hover: #15151f;
+--accent: #e86a3a;
+--accent-warm: #f0924a;
+--accent-hot: #ff7a45;
+--accent-dim: #e86a3a10;
+--accent-glow: #e8693a20;
+--teal: #3ac4b8;
+--teal-dim: #3ac4b810;
+--teal-glow: #3ac4b820;
+--text-primary: #ededf4;
+--text-secondary: #8585a0;
+--text-dim: #4a4a62;
+--border: #1a1a28;
+--border-hover: #2a2a3e;
+--gradient-start: #e8693a;
+--gradient-mid: #f07a42;
+--gradient-end: #f0924a;
 }
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-
 body {
-  font-family: 'Outfit', sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
+font-family: 'Outfit', sans-serif;
+background: var(--bg-primary);
+color: var(--text-primary);
+overflow-x: hidden;
+-webkit-font-smoothing: antialiased;
 }
-
 body::before {
-  content: '';
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 9999;
+content: '';
+position: fixed;
+top: 0; left: 0; right: 0; bottom: 0;
+background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+pointer-events: none;
+z-index: 9999;
 }
-
-.glow-orb {
-  position: fixed;
-  border-radius: 50%;
-  filter: blur(140px);
-  pointer-events: none;
-  z-index: 0;
+.glow-orb { position: fixed; border-radius: 50%; filter: blur(160px); pointer-events: none; z-index: 0; }
+.glow-orb-1 { width: 600px; height: 600px; background: radial-gradient(circle, #e8693a12 0%, transparent 70%); top: -200px; right: -100px; animation: drift1 25s ease-in-out infinite; }
+.glow-orb-2 { width: 500px; height: 500px; background: radial-gradient(circle, #3ac4b80a 0%, transparent 70%); bottom: 10%; left: -150px; animation: drift2 30s ease-in-out infinite; }
+.glow-orb-3 { width: 350px; height: 350px; background: radial-gradient(circle, #e8693a08 0%, transparent 70%); top: 50%; left: 50%; transform: translate(-50%, -50%); animation: drift3 35s ease-in-out infinite; }
+@keyframes drift1 { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(-30px, 40px) scale(1.05); } 66% { transform: translate(20px, -20px) scale(0.95); } }
+@keyframes drift2 { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(40px, -30px) scale(1.08); } 66% { transform: translate(-20px, 20px) scale(0.92); } }
+@keyframes drift3 { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; } 50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; } }
+.grid-bg {
+position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+background-image: linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+background-size: 80px 80px;
+pointer-events: none; z-index: 0;
+mask-image: radial-gradient(ellipse 60% 50% at 50% 30%, black 20%, transparent 70%);
+-webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 30%, black 20%, transparent 70%);
 }
-
-.glow-orb-1 {
-  width: 500px; height: 500px;
-  background: radial-gradient(circle, #e8693a18 0%, transparent 70%);
-  top: -150px; right: -50px;
-  animation: float 20s ease-in-out infinite;
-}
-
-.glow-orb-2 {
-  width: 400px; height: 400px;
-  background: radial-gradient(circle, #3ac4b812 0%, transparent 70%);
-  bottom: 20%; left: -100px;
-  animation: float 25s ease-in-out infinite reverse;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(30px, -40px); }
-}
-
-/* Nav */
 nav {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  padding: 20px 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 100;
-  background: rgba(10, 10, 15, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
+position: fixed; top: 0; left: 0; right: 0;
+padding: 20px 48px;
+display: flex; justify-content: space-between; align-items: center;
+z-index: 100;
+background: rgba(7, 7, 12, 0.75);
+backdrop-filter: blur(24px) saturate(1.2);
+border-bottom: 1px solid rgba(255,255,255,0.04);
 }
-
-.nav-logo {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.nav-links {
-  display: flex;
-  gap: 32px;
-  align-items: center;
-}
-
-.nav-links a {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 400;
-  transition: color 0.2s;
-  letter-spacing: 0.3px;
-}
-
+.nav-logo { font-size: 20px; font-weight: 700; letter-spacing: 1.5px; background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.nav-links { display: flex; gap: 36px; align-items: center; }
+.nav-links a { color: var(--text-dim); text-decoration: none; font-size: 13px; font-weight: 400; transition: color 0.3s; letter-spacing: 0.5px; text-transform: uppercase; }
 .nav-links a:hover { color: var(--text-primary); }
-
-/* Hero */
 .hero {
-  position: relative;
-  z-index: 1;
-  min-height: 65vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 160px 40px 80px;
+position: relative; z-index: 1;
+min-height: 72vh;
+display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+padding: 180px 40px 100px;
 }
-
+.hero-eyebrow {
+font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+color: var(--accent); margin-bottom: 28px;
+opacity: 0; animation: fadeInUp 0.7s ease 0.1s forwards;
+display: flex; align-items: center; gap: 12px;
+}
+.hero-eyebrow::before, .hero-eyebrow::after { content: ''; width: 24px; height: 1px; background: var(--accent); opacity: 0.4; }
 .hero h1 {
-  font-size: clamp(36px, 5vw, 56px);
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -1.5px;
-  max-width: 750px;
-  margin-bottom: 20px;
-  animation: fadeInUp 0.6s ease both;
+font-size: clamp(38px, 5.5vw, 62px); font-weight: 700; line-height: 1.1; letter-spacing: -2px;
+max-width: 780px; margin-bottom: 24px;
+opacity: 0; animation: fadeInUp 0.7s ease 0.2s forwards;
 }
-
 .hero h1 em {
-  font-family: 'DM Serif Display', serif;
-  font-style: italic;
-  font-weight: 400;
-  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+font-family: 'DM Serif Display', serif; font-style: italic; font-weight: 400;
+background: linear-gradient(135deg, var(--gradient-start), var(--gradient-mid), var(--gradient-end));
+-webkit-background-clip: text; -webkit-text-fill-color: transparent;
+position: relative;
 }
-
 .hero p {
-  font-size: clamp(16px, 2vw, 19px);
-  color: var(--text-secondary);
-  max-width: 480px;
-  line-height: 1.7;
-  font-weight: 300;
-  animation: fadeInUp 0.6s ease 0.1s both;
+font-size: clamp(16px, 2vw, 18px); color: var(--text-secondary); max-width: 440px; line-height: 1.75; font-weight: 300;
+opacity: 0; animation: fadeInUp 0.7s ease 0.35s forwards;
 }
-
 .hero-location {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 32px;
-  padding: 10px 24px;
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  animation: fadeInUp 0.6s ease 0.2s both;
+display: inline-flex; align-items: center; gap: 10px; margin-top: 40px;
+padding: 10px 28px; border: 1px solid var(--border); border-radius: 100px;
+opacity: 0; animation: fadeInUp 0.7s ease 0.5s forwards;
+background: rgba(255,255,255,0.015);
 }
-
-.hero-location .pin {
-  font-size: 14px;
-}
-
-.hero-location span {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: var(--text-dim);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Products */
-.products {
-  position: relative;
-  z-index: 1;
-  padding: 80px 40px 120px;
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-.section-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: var(--accent);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-bottom: 48px;
-  font-weight: 500;
-  text-align: center;
-}
-
-.product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 24px;
-}
-
+.hero-location .pin { font-size: 14px; }
+.hero-location span { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); letter-spacing: 3px; text-transform: uppercase; }
+.section-divider { width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 40px; position: relative; z-index: 1; }
+.section-divider .line { height: 1px; background: linear-gradient(90deg, transparent, var(--border), var(--accent-glow), var(--border), transparent); }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+.products { position: relative; z-index: 1; padding: 100px 40px 140px; max-width: 1100px; margin: 0 auto; }
+.section-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 4px; text-transform: uppercase; margin-bottom: 56px; font-weight: 500; text-align: center; }
+.product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
 .product-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 40px;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
+background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 44px;
+transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+position: relative; overflow: hidden;
 }
-
 .product-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--gradient-start), var(--accent-warm));
-  opacity: 0;
-  transition: opacity 0.3s;
+content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+background: linear-gradient(90deg, transparent, var(--accent-hot), transparent);
+opacity: 0; transition: opacity 0.4s;
 }
-
+.product-card::after {
+content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+background: radial-gradient(circle at 50% 0%, var(--accent-dim), transparent 60%);
+opacity: 0; transition: opacity 0.4s; pointer-events: none;
+}
 .product-card:hover {
-  border-color: var(--accent-glow);
-  transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+border-color: var(--border-hover); transform: translateY(-6px);
+box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 80px var(--accent-dim);
+background: var(--bg-card-hover);
 }
-
 .product-card:hover::before { opacity: 1; }
-
+.product-card:hover::after { opacity: 1; }
 .product-icon {
-  width: 48px; height: 48px;
-  background: var(--accent-dim);
-  border: 1px solid var(--accent-glow);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  margin-bottom: 24px;
+width: 52px; height: 52px; background: var(--accent-dim); border: 1px solid var(--accent-glow);
+border-radius: 14px; display: flex; align-items: center; justify-content: center;
+font-size: 24px; margin-bottom: 28px; position: relative; z-index: 1;
 }
-
-.product-name {
-  font-size: 22px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  letter-spacing: -0.3px;
-}
-
-.product-price {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  color: var(--accent);
-  margin-bottom: 16px;
-  font-weight: 500;
-}
-
-.product-desc {
-  font-size: 15px;
-  color: var(--text-secondary);
-  line-height: 1.7;
-  margin-bottom: 24px;
-  font-weight: 300;
-}
-
-.product-features {
-  list-style: none;
-  margin-bottom: 32px;
-}
-
-.product-features li {
-  font-size: 14px;
-  color: var(--text-secondary);
-  padding: 6px 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.product-features li::before {
-  content: '→';
-  color: var(--accent);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-}
-
-.product-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  transition: gap 0.2s;
-}
-
-.product-link:hover { gap: 12px; }
-
-.product-link::after {
-  content: '→';
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.product-card.coming-soon { opacity: 0.5; }
-
-.product-card.coming-soon .product-icon {
-  background: #1a1a2e;
-  border-color: var(--border);
-}
-
-.coming-badge {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: var(--text-dim);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  background: var(--bg-primary);
-  padding: 4px 12px;
-  border-radius: 100px;
-  border: 1px solid var(--border);
-  display: inline-block;
-}
-
-/* Footer */
-footer {
-  position: relative;
-  z-index: 1;
-  border-top: 1px solid var(--border);
-  padding: 48px 40px;
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-.footer-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 48px;
-  flex-wrap: wrap;
-  gap: 32px;
-}
-
-.footer-brand {
-  max-width: 300px;
-}
-
-.footer-brand-name {
-  font-size: 18px;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 12px;
-}
-
-.footer-brand p {
-  font-size: 14px;
-  color: var(--text-dim);
-  line-height: 1.6;
-  font-weight: 300;
-}
-
-.footer-links-group {
-  display: flex;
-  gap: 64px;
-}
-
-.footer-col h4 {
-  font-size: 12px;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--text-dim);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 16px;
-}
-
-.footer-col a {
-  display: block;
-  font-size: 14px;
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition: color 0.2s;
-  padding: 4px 0;
-  letter-spacing: 0.2px;
-}
-
+.product-header { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; position: relative; z-index: 1; }
+.product-name { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.status-dot.live { background: #22c55e; box-shadow: 0 0 8px #22c55e60; animation: pulse-dot 2s ease-in-out infinite; }
+.status-dot.soon { background: var(--accent-warm); box-shadow: 0 0 8px #f0924a40; }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.product-price { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); margin-bottom: 18px; font-weight: 500; position: relative; z-index: 1; }
+.product-desc { font-size: 15px; color: var(--text-secondary); line-height: 1.75; margin-bottom: 24px; font-weight: 300; position: relative; z-index: 1; }
+.product-features { list-style: none; margin-bottom: 32px; position: relative; z-index: 1; }
+.product-features li { font-size: 13.5px; color: var(--text-secondary); padding: 5px 0; display: flex; align-items: center; gap: 10px; font-weight: 300; }
+.product-features li::before { content: '→'; color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 11px; opacity: 0.7; }
+.product-link { display: inline-flex; align-items: center; gap: 8px; color: var(--accent); text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.3s; letter-spacing: 0.3px; position: relative; z-index: 1; }
+.product-link:hover { gap: 14px; color: var(--accent-hot); }
+.product-link::after { content: '→'; font-family: 'JetBrains Mono', monospace; transition: transform 0.3s; }
+.product-link:hover::after { transform: translateX(2px); }
+.product-link-disabled { display: inline-flex; align-items: center; gap: 8px; color: var(--text-dim); font-size: 13px; font-weight: 400; pointer-events: none; letter-spacing: 0.3px; position: relative; z-index: 1; }
+.app-store-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--teal); letter-spacing: 1.5px; text-transform: uppercase; background: var(--teal-dim); padding: 5px 14px; border-radius: 100px; border: 1px solid var(--teal-glow); display: inline-block; margin-bottom: 18px; position: relative; z-index: 1; }
+.product-card.pipeline { border-style: dashed; border-color: var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 300px; }
+.product-card.pipeline:hover { border-color: var(--border-hover); transform: translateY(-4px); }
+.product-card.pipeline::before, .product-card.pipeline::after { display: none; }
+.product-card.pipeline .product-icon { background: rgba(255,255,255,0.02); border-color: var(--border); }
+.pipeline-title { font-size: 18px; font-weight: 500; color: var(--text-dim); margin-bottom: 8px; letter-spacing: -0.3px; }
+.pipeline-sub { font-size: 13px; color: var(--text-dim); font-weight: 300; opacity: 0.7; }
+.coming-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; background: rgba(255,255,255,0.03); padding: 5px 14px; border-radius: 100px; border: 1px solid var(--border); display: inline-block; margin-bottom: 20px; }
+footer { position: relative; z-index: 1; border-top: 1px solid var(--border); padding: 56px 48px; max-width: 1100px; margin: 0 auto; }
+.footer-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 48px; flex-wrap: wrap; gap: 32px; }
+.footer-brand { max-width: 280px; }
+.footer-brand-name { font-size: 16px; font-weight: 700; letter-spacing: 1.5px; background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; }
+.footer-brand p { font-size: 13px; color: var(--text-dim); line-height: 1.7; font-weight: 300; }
+.footer-links-group { display: flex; gap: 72px; }
+.footer-col h4 { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text-dim); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 18px; }
+.footer-col a { display: block; font-size: 13px; color: var(--text-secondary); text-decoration: none; transition: color 0.3s; padding: 4px 0; letter-spacing: 0.2px; font-weight: 300; }
 .footer-col a:hover { color: var(--text-primary); }
-
-.footer-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.footer-copy {
-  font-size: 12px;
-  color: var(--text-dim);
-}
-
-.footer-legal {
-  display: flex;
-  gap: 24px;
-}
-
-.footer-legal a {
-  font-size: 12px;
-  color: var(--text-dim);
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
+.footer-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 24px; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 16px; }
+.footer-copy { font-size: 11px; color: var(--text-dim); font-weight: 300; }
+.footer-legal { display: flex; gap: 24px; }
+.footer-legal a { font-size: 11px; color: var(--text-dim); text-decoration: none; transition: color 0.2s; font-weight: 300; }
 .footer-legal a:hover { color: var(--text-secondary); }
-
-/* Mobile */
+.product-card { opacity: 0; transform: translateY(32px); }
+.product-card.visible { animation: cardReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.product-card:nth-child(1).visible { animation-delay: 0s; }
+.product-card:nth-child(2).visible { animation-delay: 0.1s; }
+.product-card:nth-child(3).visible { animation-delay: 0.2s; }
+.product-card:nth-child(4).visible { animation-delay: 0.3s; }
+@keyframes cardReveal { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 768px) {
-  nav { padding: 16px 20px; }
-  .nav-links { gap: 16px; }
-  .hero { padding: 120px 20px 60px; }
-  .products { padding: 60px 20px 80px; }
-  .product-grid { grid-template-columns: 1fr; }
-  footer { padding: 36px 20px; }
-  .footer-top { flex-direction: column; }
-  .footer-links-group { gap: 40px; }
-  .footer-bottom { flex-direction: column; text-align: center; }
+nav { padding: 16px 20px; }
+.nav-links { gap: 20px; }
+.nav-links a { font-size: 12px; }
+.hero { padding: 140px 24px 70px; min-height: 60vh; }
+.products { padding: 70px 20px 100px; }
+.product-grid { grid-template-columns: 1fr; }
+.product-card { padding: 32px; }
+.section-divider { padding: 0 20px; }
+footer { padding: 40px 20px; }
+.footer-top { flex-direction: column; }
+.footer-links-group { gap: 40px; }
+.footer-bottom { flex-direction: column; text-align: center; }
+}
+@media (max-width: 480px) {
+.hero h1 { letter-spacing: -1px; }
+.hero-eyebrow { font-size: 10px; }
 }
 </style>
 </head>
 <body>
-
 <div class="glow-orb glow-orb-1"></div>
 <div class="glow-orb glow-orb-2"></div>
+<div class="glow-orb glow-orb-3"></div>
+<div class="grid-bg"></div>
 
 <nav>
-  <div class="nav-logo">LOOPSPUR</div>
-  <div class="nav-links">
-    <a href="#products">Products</a>
-    <a href="mailto:hello@loopspur.ai">Contact</a>
-  </div>
+<div class="nav-logo">LOOPSPUR</div>
+<div class="nav-links">
+<a href="#products">Products</a>
+<a href="mailto:hello@loopspur.com">Contact</a>
+</div>
 </nav>
 
 <section class="hero">
-  <h1>A software company building products people use <em>every day.</em></h1>
-  <p>We make tools that are simple, smart, and always working for you.</p>
-  <div class="hero-location">
-    <span class="pin">🌵</span>
-    <span>Austin, Texas</span>
-  </div>
+<div class="hero-eyebrow">Software Studio</div>
+<h1>We build products people use <em>every day.</em></h1>
+<p>Simple tools, smart design, always working for you.</p>
+<div class="hero-location">
+<span class="pin">🌵</span>
+<span>Austin, Texas</span>
+</div>
 </section>
 
-<section class="products" id="products">
-  <div class="section-label">// What We're Building</div>
-  
-  <div class="product-grid">
-    <div class="product-card">
-      <div class="product-icon">📊</div>
-      <div class="product-name">PolyPulse</div>
-      <div class="product-price">Free / $9.99 mo Premium</div>
-      <div class="product-desc">Real-time Polymarket prediction market tracking on Telegram. Alerts, watchlists, trending markets, and daily digests.</div>
-      <ul class="product-features">
-        <li>Instant price checks on any market</li>
-        <li>Smart alerts when odds shift</li>
-        <li>Daily digest of biggest movers</li>
-        <li>Personal watchlist tracking</li>
-        <li>Trending markets with volume data</li>
-      </ul>
-      <a href="https://t.me/GetPolyPulse_bot" class="product-link">Try on Telegram</a>
-    </div>
-    
-    <div class="product-card">
-      <div class="product-icon">💰</div>
-      <div class="product-name">SpendBot</div>
-      <div class="product-price">Free / $4.99 Premium</div>
-      <div class="product-desc">Smart expense tracking that makes managing money effortless. Track spending, set budgets, and get insights.</div>
-      <ul class="product-features">
-        <li>Quick expense logging</li>
-        <li>Smart category detection</li>
-        <li>Monthly budget tracking</li>
-        <li>Spending streaks & insights</li>
-        <li>Works offline as PWA</li>
-      </ul>
-      <a href="#" class="product-link" style="pointer-events:none; opacity:0.4;">Coming to App Stores</a>
-    </div>
+<div class="section-divider"><div class="line"></div></div>
 
-    <div class="product-card coming-soon">
-      <div class="product-icon">🔮</div>
-      <div class="product-name">More coming</div>
-      <div class="coming-badge">In Pipeline</div>
-      <div class="product-desc" style="margin-top: 16px;">New products ship regularly. We're always building the next thing.</div>
-    </div>
-  </div>
+<section class="products" id="products">
+<div class="section-label">What We're Building</div>
+<div class="product-grid">
+
+<div class="product-card">
+<div class="product-icon">⏱️</div>
+<div class="product-header">
+<div class="product-name">Honest Fast</div>
+<span class="status-dot soon"></span>
+</div>
+<div class="product-price">$6.99 one-time</div>
+<div class="app-store-badge">Coming to App Stores</div>
+<div class="product-desc">The anti-subscription fasting timer. Simple intermittent fasting tracking without the $70/yr price tag. No ads. No account required.</div>
+<ul class="product-features">
+<li>Clean countdown &amp; count-up timer</li>
+<li>All schedules — 16:8, 18:6, 20:4, OMAD</li>
+<li>Home screen widget</li>
+<li>Apple Watch support</li>
+<li>100% on-device — your data stays yours</li>
+</ul>
+<span class="product-link-disabled">iOS &amp; Android — Coming Soon</span>
+</div>
+
+<div class="product-card">
+<div class="product-icon">📊</div>
+<div class="product-header">
+<div class="product-name">PolyPulse</div>
+<span class="status-dot live"></span>
+</div>
+<div class="product-price">Free / $9.99 mo Premium</div>
+<div class="product-desc">Real-time Polymarket prediction market tracking on Telegram. Alerts, watchlists, trending markets, and daily digests — all in one bot.</div>
+<ul class="product-features">
+<li>Instant price checks on any market</li>
+<li>Smart alerts when odds shift</li>
+<li>Daily digest of biggest movers</li>
+<li>Personal watchlist tracking</li>
+<li>Trending markets with volume data</li>
+</ul>
+<a href="https://t.me/GetPolyPulse_bot" class="product-link">Try on Telegram</a>
+</div>
+
+<div class="product-card">
+<div class="product-icon">💰</div>
+<div class="product-header">
+<div class="product-name">SpendBot</div>
+<span class="status-dot soon"></span>
+</div>
+<div class="product-price">Free / $4.99 Premium</div>
+<div class="app-store-badge">Coming to App Stores</div>
+<div class="product-desc">Smart expense tracking that makes managing money effortless. Track spending, set budgets, and get insights — all offline.</div>
+<ul class="product-features">
+<li>Quick expense logging</li>
+<li>Smart category detection</li>
+<li>Monthly budget tracking</li>
+<li>Spending streaks &amp; insights</li>
+<li>Works offline as PWA</li>
+</ul>
+<span class="product-link-disabled">iOS &amp; Android — Coming Soon</span>
+</div>
+
+<div class="product-card pipeline">
+<div class="product-icon">🔮</div>
+<div class="coming-badge">In Pipeline</div>
+<div class="pipeline-title">More products shipping soon</div>
+<div class="pipeline-sub">We're always building the next thing.</div>
+</div>
+
+</div>
 </section>
 
 <footer>
-  <div class="footer-top">
-    <div class="footer-brand">
-      <div class="footer-brand-name">LOOPSPUR</div>
-      <p>Built in Austin, TX. We make software that works harder than you do.</p>
-    </div>
-    <div class="footer-links-group">
-      <div class="footer-col">
-        <h4>Products</h4>
-        <a href="https://t.me/GetPolyPulse_bot">PolyPulse</a>
-        <a href="#">SpendBot</a>
-      </div>
-      <div class="footer-col">
-        <h4>Company</h4>
-        <a href="mailto:hello@loopspur.ai">Contact</a>
-        <a href="/privacy">Privacy Policy</a>
-        <a href="/terms">Terms of Service</a>
-      </div>
-    </div>
-  </div>
-  <div class="footer-bottom">
-    <div class="footer-copy">© 2026 Loopspur. All rights reserved.</div>
-    <div class="footer-legal">
-      <a href="/privacy">Privacy</a>
-      <a href="/terms">Terms</a>
-    </div>
-  </div>
+<div class="footer-top">
+<div class="footer-brand">
+<div class="footer-brand-name">LOOPSPUR</div>
+<p>Built in Austin, TX. Software that works harder than you do.</p>
+</div>
+<div class="footer-links-group">
+<div class="footer-col">
+<h4>Products</h4>
+<a href="#">Honest Fast</a>
+<a href="https://t.me/GetPolyPulse_bot">PolyPulse</a>
+<a href="#">SpendBot</a>
+</div>
+<div class="footer-col">
+<h4>Company</h4>
+<a href="mailto:hello@loopspur.com">Contact</a>
+<a href="/privacy">Privacy Policy</a>
+<a href="/terms">Terms of Service</a>
+</div>
+</div>
+</div>
+<div class="footer-bottom">
+<div class="footer-copy">© 2026 Loopspur. All rights reserved.</div>
+<div class="footer-legal">
+<a href="/privacy">Privacy</a>
+<a href="/terms">Terms</a>
+</div>
+</div>
 </footer>
 
+<script>
+const observer = new IntersectionObserver((entries) => {
+entries.forEach(entry => {
+if (entry.isIntersecting) {
+entry.target.classList.add('visible');
+observer.unobserve(entry.target);
+}
+});
+}, { threshold: 0.15 });
+document.querySelectorAll('.product-card').forEach(card => observer.observe(card));
+</script>
 </body>
 </html>
