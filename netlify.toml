@@ -19,6 +19,21 @@
   status = 301
   force = true
 
+[[headers]]
+  for = "/mission-control/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/mission-control"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[redirects]]
+  from = "/mission-control"
+  to = "/mission-control/index.html"
+  status = 200
+
 [[redirects]]
   from = "/privacy"
   to = "/privacy.html"
