@@ -68,12 +68,21 @@ export async function handler(event) {
       isaiah:  { role: "Engineer", icon: "⚡", angle: 342, color: "#a78bfa" },
       paul:    { role: "Growth", icon: "📢", angle: 54, color: "#00ff88" },
       daniel:  { role: "Intel", icon: "🔍", angle: 126, color: "#fbbf24" },
-      gordon:  { role: "Trading", icon: "📊", angle: 198, color: "#475569" },
       raphael: { role: "Design", icon: "🎨", angle: 162, color: "#64748b" },
     };
     const agents = {};
+    const now = Date.now();
     for (const [name, meta] of Object.entries(agentMeta)) {
-      const sess = sessions.find(s => s.agent === name);
+      // Find most recent session for this agent
+      const sess = sessions
+        .filter(s => s.agent === name)
+        .sort((a, b) => new Date(b.started_at) - new Date(a.started_at))[0];
+      // Determine real status: if heartbeat >30min old, treat as offline even if DB says online
+      let realStatus = sess?.status || 'offline';
+      if (realStatus === 'online' && sess?.last_heartbeat_at) {
+        const hbAge = now - new Date(sess.last_heartbeat_at).getTime();
+        if (hbAge > 30 * 60 * 1000) realStatus = 'stale'; // >30min without heartbeat
+      }
       const agTasks = tasks.filter(t => t.assigned_agent === name);
       const agTodayTasks = todayTasks.filter(t => t.assigned_agent === name);
       const agTokens = tokenUsage.filter(t => t.agent === name);
@@ -81,18 +90,23 @@ export async function handler(event) {
       const running = agTasks.find(t => t.status === 'running');
       const succeeded = agTodayTasks.filter(t => t.status === 'succeeded').length;
       const total = agTodayTasks.length;
+      // Last activity from events
+      const lastEvent = events.find(e => e.agent === name);
+      const lastActiveMin = lastEvent ? Math.round((now - new Date(lastEvent.created_at).getTime()) / 60000) : null;
       agents[name] = {
         name: name.toUpperCase(),
         role: meta.role,
         icon: meta.icon,
         angle: meta.angle,
         color: meta.color,
-        status: sess?.status || 'offline',
+        status: realStatus,
         model: sess?.model || null,
-        task: running?.title || (sess?.status === 'online' ? 'Awaiting dispatch' : 'Offline'),
+        task: running?.title || (realStatus === 'online' ? 'Awaiting dispatch' : realStatus === 'stale' ? 'No heartbeat' : 'Offline'),
         tasks: total,
         cost: Math.round(cost * 100) / 100,
         eff: total > 0 ? Math.round((succeeded / total) * 100) : 0,
+        last_active_min: lastActiveMin,
+        last_heartbeat: sess?.last_heartbeat_at || null,
       };
     }
 
@@ -213,8 +227,8 @@ export async function handler(event) {
     const content = {
       target: 10,
       today: contentEvents.length,
-      crawls: 140, // TODO: pull from GSC API
-      indexed: 50,  // TODO: pull from GSC API
+      crawls: null, // dynamic — not available without GSC API key in env
+      indexed: null, // dynamic — not available without GSC API key in env
     };
 
     // ── Phases ──
@@ -255,13 +269,16 @@ export async function handler(event) {
 
     // ── Infra ──
     const alfredSess = sessions.find(s => s.agent === 'alfred');
+    // Infra: derive from actual session data
+    const alfredAge = alfredSess?.started_at ? Math.round((now - new Date(alfredSess.started_at).getTime()) / 3600000) : null;
     const infra = {
-      mac: 'online',
+      mac: alfredSess?.status === 'online' ? 'online' : 'unknown',
       gw: ':18789',
-      oc: '2026.2.18',
-      tok: '~42K/200K',
-      res: '40K',
+      oc: null, // populated by heartbeat cron
+      tok: null, // populated by heartbeat cron
+      res: null, // populated by heartbeat cron
       rst: alfredSess?.started_at ? new Date(alfredSess.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—',
+      alfred_uptime_hours: alfredAge,
       sess: {},
     };
     for (const name of Object.keys(agentMeta)) {
@@ -269,11 +286,11 @@ export async function handler(event) {
       infra.sess[name] = s?.status === 'online' ? 'ok' : '—';
     }
 
-    // ── Gordon ──
-    const gordon = {
-      strategies: ['Grid (Low)', 'Momentum (Med)', 'F&G DCA (Low)', 'Arb (Opp)'],
-      risk: '2%/trade', halt: '5% → HALT', cash: '40% reserve',
-      status: agents.gordon?.status === 'online' ? 'ACTIVE' : 'NOT ACTIVE',
+    // ── arb-daemon (monitored system, not an agent) ──
+    const arbDaemon = {
+      edges: ['Edge 2: FLB', 'Edge 4: Brackets', 'Edge 5: Regime'],
+      risk: '10% daily loss → HALT', capital: '$1,000 starting',
+      mode: 'dry_run',
     };
 
     // ── Optimization ──
@@ -316,27 +333,59 @@ export async function handler(event) {
     const posSettled = v3Positions.filter(p => p.status === 'settled');
     const posCancelled = v3Positions.filter(p => p.status === 'cancelled');
     const posExpired = v3Positions.filter(p => p.status === 'expired_unprocessed');
-    const totalPnl = posSettled.reduce((s, p) => s + parseFloat(p.unrealized_pnl || 0), 0);
-    const todaySettled = posSettled.filter(p => p.closed_at?.startsWith(today));
-    const todayPnl = todaySettled.reduce((s, p) => s + parseFloat(p.unrealized_pnl || 0), 0);
-    const settledWins = posSettled.filter(p => parseFloat(p.unrealized_pnl || 0) > 0).length;
+    const posFlushed = v3Positions.filter(p => p.status === 'flushed' || p.status === 'flushed_stale');
+    const totalPnl = posSettled.reduce((s, p) => s + parseFloat(p.realized_pnl || 0), 0);
+    const totalCostTrading = posSettled.reduce((s, p) => s + parseFloat(p.total_cost || 0), 0);
+    const todaySettled = posSettled.filter(p => p.closed_at?.startsWith(today) || p.opened_at?.startsWith(today));
+    const todayPnl = todaySettled.reduce((s, p) => s + parseFloat(p.realized_pnl || 0), 0);
+    const todayCostTrading = todaySettled.reduce((s, p) => s + parseFloat(p.total_cost || 0), 0);
+    const settledWins = posSettled.filter(p => parseFloat(p.realized_pnl || 0) > 0).length;
     const winRate = posSettled.length > 0 ? Math.round((settledWins / posSettled.length) * 10000) / 100 : 0;
 
+    // Daily P&L history (last 14 days)
+    const dailyPnl = {};
+    for (const p of posSettled) {
+      const day = (p.closed_at || p.opened_at || '').slice(0, 10);
+      if (!day) continue;
+      if (!dailyPnl[day]) dailyPnl[day] = { pnl: 0, cost: 0, trades: 0, wins: 0 };
+      dailyPnl[day].pnl += parseFloat(p.realized_pnl || 0);
+      dailyPnl[day].cost += parseFloat(p.total_cost || 0);
+      dailyPnl[day].trades++;
+      if (parseFloat(p.realized_pnl || 0) > 0) dailyPnl[day].wins++;
+    }
+    // Convert to sorted array, last 14 days
+    const dailyPnlArr = Object.entries(dailyPnl)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-14)
+      .map(([day, d]) => ({
+        day,
+        pnl: Math.round(d.pnl * 100) / 100,
+        cost: Math.round(d.cost * 100) / 100,
+        trades: d.trades,
+        wins: d.wins,
+        win_rate: d.trades > 0 ? Math.round((d.wins / d.trades) * 100) : 0,
+      }));
+
     // Edge performance
-    const edgeSet = new Set([...v3Positions.map(p => p.edge), ...v3Signals.map(s => s.edge)].filter(Boolean));
+    const edgeSet = new Set(v3Positions.map(p => p.edge).filter(Boolean));
     const edges = [...edgeSet].map(edge => {
-      const eSigs = v3Signals.filter(s => s.edge === edge);
       const ePos = v3Positions.filter(p => p.edge === edge);
       const eSettled = ePos.filter(p => p.status === 'settled');
-      const eWins = eSettled.filter(p => parseFloat(p.unrealized_pnl || 0) > 0).length;
-      const ePnl = eSettled.reduce((s, p) => s + parseFloat(p.unrealized_pnl || 0), 0);
+      const eWins = eSettled.filter(p => parseFloat(p.realized_pnl || 0) > 0).length;
+      const ePnl = eSettled.reduce((s, p) => s + parseFloat(p.realized_pnl || 0), 0);
+      const eCost = eSettled.reduce((s, p) => s + parseFloat(p.total_cost || 0), 0);
+      const eTodaySettled = eSettled.filter(p => (p.closed_at || p.opened_at || '').startsWith(today));
+      const eTodayPnl = eTodaySettled.reduce((s, p) => s + parseFloat(p.realized_pnl || 0), 0);
       return {
         edge,
-        signals: eSigs.length,
         positions: ePos.length,
         settled: eSettled.length,
+        wins: eWins,
         win_rate: eSettled.length > 0 ? Math.round((eWins / eSettled.length) * 10000) / 100 : 0,
         pnl: Math.round(ePnl * 100) / 100,
+        cost: Math.round(eCost * 100) / 100,
+        today_pnl: Math.round(eTodayPnl * 100) / 100,
+        roi: eCost > 0 ? Math.round((ePnl / eCost) * 10000) / 100 : 0,
       };
     });
 
@@ -349,20 +398,34 @@ export async function handler(event) {
       byEdge[s.edge || 'unknown'] = (byEdge[s.edge || 'unknown'] || 0) + 1;
     }
 
+    // Gordon decommissioned Feb 2026 — all arb strategies dead.
+    // v3_positions contains stale dry-run data. Zero it out.
+    const tradingDecommissioned = true;
+
     const trading = {
-      balance: 1010.00,
+      balance: tradingDecommissioned ? 0 : (1000 + Math.round(totalPnl * 100) / 100),
+      starting_capital: tradingDecommissioned ? 0 : 1000,
+      mode: tradingDecommissioned ? 'decommissioned' : 'dry_run',
+      decommissioned: tradingDecommissioned,
       positions: {
         open: posOpen.length,
         settled: posSettled.length,
         cancelled: posCancelled.length,
         expired_unprocessed: posExpired.length,
+        flushed: posFlushed.length,
         total: v3Positions.length,
       },
       pnl: {
         total: Math.round(totalPnl * 100) / 100,
         today: Math.round(todayPnl * 100) / 100,
+        total_cost: Math.round(totalCostTrading * 100) / 100,
+        today_cost: Math.round(todayCostTrading * 100) / 100,
         win_rate: winRate,
+        wins: settledWins,
+        losses: posSettled.length - settledWins,
+        roi: totalCostTrading > 0 ? Math.round((totalPnl / totalCostTrading) * 10000) / 100 : 0,
       },
+      daily_pnl: dailyPnlArr,
       edges,
       recent_positions: v3Positions.slice(-20).reverse(),
       recent_signals: v3Signals.slice(-30).reverse(),
@@ -419,13 +482,14 @@ export async function handler(event) {
     const arbEvents = events.filter(e => e.tags?.includes('arb') || e.event_type?.includes('arb'));
     const latestArbEvent = arbEvents[0]; // most recent (already sorted desc)
     const arbSummary = {
-      pnl_total: Math.round((posSettled.reduce((s, p) => s + parseFloat(p.unrealized_pnl || 0), 0)) * 100) / 100,
+      pnl_total: Math.round(totalPnl * 100) / 100,
       pnl_today: Math.round(todayPnl * 100) / 100,
       win_rate: winRate,
       positions_open: posOpen.length,
       positions_settled: posSettled.length,
       last_signal: v3Signals[0]?.timestamp || null,
       status: posOpen.length > 0 || (v3Signals[0] && new Date(v3Signals[0].timestamp) > new Date(Date.now() - 3600000)) ? 'active' : 'idle',
+      mode: 'dry_run',
     };
 
     // ── Revenue Detail ──
@@ -460,12 +524,91 @@ export async function handler(event) {
 
     // ── Enhanced Crons with status ──
     for (const cron of crons) {
-      // Determine status based on last run
       if (cron.last !== '—') {
         cron.status = 'ok';
       } else {
         cron.status = 'unknown';
       }
+    }
+
+    // ── Agent Last Active ──
+    const agentLastActive = {};
+    for (const name of Object.keys(agentMeta)) {
+      const agEvents = events.filter(e => e.agent === name);
+      if (agEvents.length > 0) {
+        agentLastActive[name] = {
+          timestamp: agEvents[0].created_at,
+          ago_min: Math.round((Date.now() - new Date(agEvents[0].created_at).getTime()) / 60000),
+          event: agEvents[0].event_type || 'unknown',
+          message: agEvents[0].payload?.message || agEvents[0].event_type || '',
+        };
+      }
+    }
+
+    // ── Pending Approvals (tasks needing Scott's decision) ──
+    const pendingApprovals = tasks
+      .filter(t =>
+        t.status === 'blocked' ||
+        t.priority === 'critical' ||
+        t.tags?.includes?.('needs_approval') ||
+        t.tags?.includes?.('pending_approval')
+      )
+      .map(t => ({
+        id: t.id,
+        title: t.title,
+        agent: t.assigned_agent || 'unassigned',
+        priority: t.priority || 'normal',
+        status: t.status,
+        product: t.product || 'factory',
+        created: t.created_at,
+        age_hours: Math.round((Date.now() - new Date(t.created_at).getTime()) / 3600000),
+        tags: t.tags || [],
+      }));
+
+    // ── Factory Health Score (0-100) ──
+    const healthAgents = Math.round((Object.values(agents).filter(a => a.status === 'online').length / Object.keys(agentMeta).length) * 25);
+    const healthTasks = Math.max(0, 25 - (tasks.filter(t => t.status === 'blocked').length * 4) - (p0.length * 3));
+    const healthContent = Math.min(25, Math.round(((articlesToday || contentToday) / 10) * 25));
+    const healthSystems = Math.min(25, 15 + (totalRevenue > 0 ? 5 : 0) + (posOpen.length === 0 ? 5 : 3));
+    const healthScore = {
+      total: Math.min(100, healthAgents + healthTasks + healthContent + healthSystems),
+      agents: healthAgents,
+      tasks: healthTasks,
+      content: healthContent,
+      systems: healthSystems,
+      grade: (healthAgents + healthTasks + healthContent + healthSystems) >= 80 ? 'A' :
+             (healthAgents + healthTasks + healthContent + healthSystems) >= 60 ? 'B' :
+             (healthAgents + healthTasks + healthContent + healthSystems) >= 40 ? 'C' : 'D',
+    };
+
+    // ── Commander's Brief (auto-generated) ──
+    const briefParts = [];
+    const onlineNames = Object.entries(agents).filter(([,a]) => a.status === 'online').map(([id]) => id);
+    const offlineNames = Object.entries(agents).filter(([,a]) => a.status !== 'online').map(([id]) => id);
+    briefParts.push(`${onlineNames.length}/${Object.keys(agents).length} agents online (${onlineNames.join(', ')}).`);
+    if (offlineNames.length > 0) briefParts.push(`Offline: ${offlineNames.join(', ')}.`);
+    const blockedTasks = tasks.filter(t => t.status === 'blocked');
+    if (blockedTasks.length > 0) briefParts.push(`⚠️ ${blockedTasks.length} tasks blocked.`);
+    if (p0.length > 0) briefParts.push(`🚨 ${p0.length} P0 items need attention.`);
+    briefParts.push(`Content: ${articlesToday || contentToday}/${10} articles today (${articlesTotal || contentTotal} total).`);
+    if (todayRevenue > 0) briefParts.push(`💰 $${todayRevenue.toFixed(2)} revenue today.`);
+    else briefParts.push(`Revenue: $0 today. MRR: $${(stripeMRR || 0).toFixed(2)}.`);
+    if (posOpen.length > 0) briefParts.push(`Trading: ${posOpen.length} positions open.`);
+    if (pendingApprovals.length > 0) briefParts.push(`📋 ${pendingApprovals.length} items awaiting review.`);
+    const commanderBrief = briefParts.join(' ');
+
+    // ── Uptime (last 24h event coverage per agent) ──
+    const last24h = new Date(Date.now() - 24 * 3600000).toISOString();
+    const agentUptime = {};
+    for (const name of Object.keys(agentMeta)) {
+      const recent = events.filter(e => e.agent === name && e.created_at >= last24h);
+      // Rough uptime: if events spread across multiple hours, agent was active
+      const hoursActive = new Set(recent.map(e => new Date(e.created_at).getHours())).size;
+      agentUptime[name] = {
+        events_24h: recent.length,
+        hours_active: hoursActive,
+        uptime_pct: Math.min(100, Math.round((hoursActive / 24) * 100)),
+      };
     }
 
     const output = {
@@ -494,7 +637,7 @@ export async function handler(event) {
       phases,
       socials,
       infra,
-      gordon,
+      arb_daemon: arbDaemon,
       optimization,
       crons,
       trading,
@@ -504,6 +647,11 @@ export async function handler(event) {
       revenue_detail: revenueDetail,
       last_briefing: lastBriefing,
       db_tables: ['factory_tasks','factory_steps','factory_events','factory_policy','factory_triggers','revenue_events','products','opportunities','agent_sessions','token_usage','model_routing','v3_positions','v3_signals'],
+      agent_last_active: agentLastActive,
+      pending_approvals: pendingApprovals,
+      health_score: healthScore,
+      commander_brief: commanderBrief,
+      agent_uptime: agentUptime,
     };
 
     return { statusCode: 200, headers: CORS, body: JSON.stringify(output) };
