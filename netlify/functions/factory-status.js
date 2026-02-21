@@ -42,7 +42,8 @@ export async function handler(event) {
     const [
       tasks, events, policies, triggers, revenue,
       products, opportunities, sessions, tokenUsage, modelRouting,
-      v3Positions, v3Signals, affiliateClicks
+      v3Positions, v3Signals, affiliateClicks,
+      evolutionBoard, docsHealth, alertsRaw
     ] = await Promise.all([
       q('factory_tasks', { order: 'created_at', limit: 300 }),
       q('factory_events', { order: 'created_at', limit: 500 }),
@@ -57,6 +58,9 @@ export async function handler(event) {
       q('v3_positions', { order: 'opened_at', limit: 500 }),
       q('v3_signals', { order: 'timestamp', limit: 500 }),
       q('affiliate_clicks', { order: 'created_at', limit: 500 }),
+      q('evolution_board', { order: 'rank', asc: true, limit: 10 }),
+      q('documents', { order: 'created_at' }),
+      q('alerts', { order: 'created_at', eq: { dismissed: false }, limit: 20 }),
     ]);
 
     const todayEvents = events.filter(e => e.created_at?.startsWith(today));
@@ -611,6 +615,134 @@ export async function handler(event) {
       };
     }
 
+    // ── Evolution Board (from DB) ──
+    const evoBoard = (evolutionBoard || []).map(e => ({
+      rank: e.rank,
+      title: e.title,
+      status: e.status,
+      owner: e.owner,
+      target_stage: e.target_stage,
+      revenue_impact: e.revenue_impact,
+      urgency: e.urgency,
+      build_time: e.build_time,
+      scott_dependency: e.scott_dependency,
+      days_on_board: e.days_on_board,
+      outcome: e.outcome,
+    }));
+    const evoSummary = {
+      total: evoBoard.length,
+      queued: evoBoard.filter(e => e.status === 'QUEUED').length,
+      in_progress: evoBoard.filter(e => e.status === 'IN_PROGRESS' || e.status === 'DISPATCHED').length,
+      completed: evoBoard.filter(e => e.status === 'COMPLETED').length,
+      blocked: evoBoard.filter(e => e.status === 'BLOCKED').length,
+      bottleneck: (() => {
+        const stages = {};
+        evoBoard.filter(e => e.status !== 'COMPLETED').forEach(e => { stages[e.target_stage] = (stages[e.target_stage] || 0) + 1; });
+        const sorted = Object.entries(stages).sort((a, b) => b[1] - a[1]);
+        return sorted[0] ? sorted[0][0] : null;
+      })(),
+    };
+
+    // ── Pipeline Health (derived from tasks + events) ──
+    const PIPELINE_STAGES = ['DETECT', 'EVALUATE', 'DECIDE', 'DESIGN', 'BUILD', 'MARKET', 'SELL', 'SCALE'];
+    const stageMap = {};
+    for (const s of PIPELINE_STAGES) stageMap[s] = { tasks: 0, completed: 0, blocked: 0 };
+    // Map tasks to stages by tags/product
+    for (const t of tasks) {
+      const tags = t.tags || [];
+      let stage = null;
+      if (tags.includes('research') || tags.includes('scanner') || tags.includes('detect')) stage = 'DETECT';
+      else if (tags.includes('evaluate') || tags.includes('score')) stage = 'EVALUATE';
+      else if (tags.includes('decide') || tags.includes('approval')) stage = 'DECIDE';
+      else if (tags.includes('design') || tags.includes('ui') || tags.includes('ux')) stage = 'DESIGN';
+      else if (tags.includes('build') || tags.includes('code') || tags.includes('deploy')) stage = 'BUILD';
+      else if (tags.includes('content') || tags.includes('marketing') || tags.includes('seo')) stage = 'MARKET';
+      else if (tags.includes('sell') || tags.includes('revenue') || tags.includes('affiliate')) stage = 'SELL';
+      else if (tags.includes('scale') || tags.includes('automation')) stage = 'SCALE';
+      else {
+        // Infer from assigned agent
+        const ag = t.assigned_agent;
+        if (ag === 'daniel') stage = 'DETECT';
+        else if (ag === 'raphael') stage = 'DESIGN';
+        else if (ag === 'isaiah') stage = 'BUILD';
+        else if (ag === 'paul') stage = 'MARKET';
+        else stage = 'BUILD';
+      }
+      if (stage && stageMap[stage]) {
+        stageMap[stage].tasks++;
+        if (t.status === 'succeeded') stageMap[stage].completed++;
+        if (t.status === 'blocked') stageMap[stage].blocked++;
+      }
+    }
+    const pipelineHealth = PIPELINE_STAGES.map(s => {
+      const d = stageMap[s];
+      const total = Math.max(d.tasks, 1);
+      const score = Math.min(10, Math.round(((d.completed / total) * 7) + (d.tasks > 0 ? 2 : 0) + (d.blocked === 0 ? 1 : 0)));
+      return { stage: s, score, tasks: d.tasks, completed: d.completed, blocked: d.blocked };
+    });
+    const pipelineBottleneck = pipelineHealth.reduce((min, s) => s.score < min.score ? s : min, pipelineHealth[0]);
+
+    // ── Autonomy Score (0-100) ──
+    const scottInterventions = events.filter(e =>
+      e.event_type?.includes('scott') || e.event_type?.includes('approval') || e.tags?.includes('scott_required')
+    ).length;
+    const totalTasksDone = tasks.filter(t => t.status === 'succeeded').length;
+    const totalTasksAll = Math.max(tasks.length, 1);
+    const revAutonomy = totalRevenue > 0 ? Math.min(100, Math.round((totalRevenue / 100) * 100)) : 0; // % toward $100 autonomous
+    const opsAutonomy = Math.min(100, Math.round(((totalTasksDone / totalTasksAll) * 60) + (onlineAgents.length / 5 * 20) + (scottInterventions === 0 ? 20 : Math.max(0, 20 - scottInterventions * 4))));
+    const autonomyScore = {
+      total: Math.round((revAutonomy * 0.4 + opsAutonomy * 0.6)),
+      revenue_autonomy: revAutonomy,
+      ops_autonomy: opsAutonomy,
+      scott_interventions_week: scottInterventions,
+      tasks_completed: totalTasksDone,
+      tasks_total: tasks.length,
+    };
+
+    // ── Document Health (from DB, auto-compute status) ──
+    const documentsHealth = (docsHealth || []).map(d => {
+      const lastReviewed = d.last_reviewed_at ? new Date(d.last_reviewed_at) : null;
+      const daysSince = lastReviewed ? Math.round((now - lastReviewed.getTime()) / 86400000) : 999;
+      const autoStatus = daysSince > 21 ? 'untrusted' : daysSince > d.review_cycle_days ? 'aging' : 'fresh';
+      return {
+        name: d.name,
+        path: d.path,
+        owner: d.owner,
+        review_cycle_days: d.review_cycle_days,
+        last_reviewed_at: d.last_reviewed_at,
+        days_since_review: daysSince,
+        status: autoStatus,
+      };
+    });
+    const docSummary = {
+      total: documentsHealth.length,
+      fresh: documentsHealth.filter(d => d.status === 'fresh').length,
+      aging: documentsHealth.filter(d => d.status === 'aging').length,
+      untrusted: documentsHealth.filter(d => d.status === 'untrusted').length,
+    };
+
+    // ── Alerts (from DB + auto-generated) ──
+    const autoAlerts = [];
+    // Auto-generate alerts from data
+    if (Object.values(agents).every(a => a.status !== 'online')) autoAlerts.push({ level: 'critical', title: 'All agents offline', message: 'No agents are currently online', source: 'auto' });
+    if (p0.length > 0) autoAlerts.push({ level: 'critical', title: `${p0.length} P0 blockers`, message: p0.map(b => b.i).join(', '), source: 'auto' });
+    if (docSummary.untrusted > 0) autoAlerts.push({ level: 'warning', title: `${docSummary.untrusted} untrusted docs`, message: 'Documents overdue for review (>21 days)', source: 'auto' });
+    const staleTasks = tasks.filter(t => t.status === 'running' && t.updated_at && (now - new Date(t.updated_at).getTime()) > 24 * 3600000);
+    if (staleTasks.length > 0) autoAlerts.push({ level: 'warning', title: `${staleTasks.length} stale running tasks`, message: 'Tasks running >24h without update', source: 'auto' });
+    const allAlerts = [
+      ...autoAlerts.map(a => ({ ...a, auto: true, created_at: new Date().toISOString() })),
+      ...(alertsRaw || []).map(a => ({ level: a.level, title: a.title, message: a.message, source: a.source, auto: false, created_at: a.created_at })),
+    ];
+
+    // ── Token spend by model ──
+    const tokensByModel = {};
+    for (const t of tokenUsage) {
+      const m = t.model || 'unknown';
+      tokensByModel[m] = (tokensByModel[m] || 0) + parseFloat(t.cost_usd || 0);
+    }
+    // Round values
+    for (const k of Object.keys(tokensByModel)) tokensByModel[k] = Math.round(tokensByModel[k] * 100) / 100;
+
     const output = {
       generated_at: new Date().toISOString(),
       agents,
@@ -646,12 +778,22 @@ export async function handler(event) {
       arb_summary: arbSummary,
       revenue_detail: revenueDetail,
       last_briefing: lastBriefing,
-      db_tables: ['factory_tasks','factory_steps','factory_events','factory_policy','factory_triggers','revenue_events','products','opportunities','agent_sessions','token_usage','model_routing','v3_positions','v3_signals'],
+      db_tables: ['factory_tasks','factory_steps','factory_events','factory_policy','factory_triggers','revenue_events','products','opportunities','agent_sessions','token_usage','model_routing','v3_positions','v3_signals','evolution_board','documents','alerts'],
       agent_last_active: agentLastActive,
       pending_approvals: pendingApprovals,
       health_score: healthScore,
       commander_brief: commanderBrief,
       agent_uptime: agentUptime,
+      // ── NEW: v3 panels ──
+      evolution_board: evoBoard,
+      evolution_summary: evoSummary,
+      pipeline_health: pipelineHealth,
+      pipeline_bottleneck: pipelineBottleneck,
+      autonomy_score: autonomyScore,
+      documents: documentsHealth,
+      doc_summary: docSummary,
+      alerts: allAlerts,
+      tokens_by_model: tokensByModel,
     };
 
     return { statusCode: 200, headers: CORS, body: JSON.stringify(output) };
